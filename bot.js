@@ -200,7 +200,16 @@ bot.on('message', async (msg) => {
         delete pendingActions[chatId];
     }
 
-    
+     // ➕ Test qo‘shish (vaqt qo'shildi)
+     else if (text === "Test qo‘shish") {
+        pendingActions[chatId] = { action: 'add_test' };
+        bot.sendMessage(chatId, "Test kodi kiriting:");
+    }
+
+    else if (pendingActions[chatId]?.action === 'add_test' && !pendingActions[chatId].code) {
+        pendingActions[chatId].code = text;
+        bot.sendMessage(chatId, "Test uchun to‘g‘ri javoblarni kiriting (masalan: ABCDCBA):");
+    }
 
     else if (pendingActions[chatId]?.action === 'add_test' && pendingActions[chatId].correctAnswers) {
         let timeRange = text.split('-');
@@ -259,25 +268,20 @@ bot.on('message', async (msg) => {
             return;
         }
 
-        let now = new Date();
-        let [startHour, startMinute] = test.startTime.split(':').map(Number);
-        let [endHour, endMinute] = test.endTime.split(':').map(Number);
-
-        let startTime = new Date(now);
-        startTime.setHours(startHour, startMinute, 0, 0);
-
-        let endTime = new Date(now);
-        endTime.setHours(endHour, endMinute, 0, 0);
-
-        if (now < startTime) {
+        let now = moment().tz("Asia/Tashkent"); // Hozirgi vaqtni Toshkent vaqti bilan olish
+        let startTime = moment.tz(test.startTime, "HH:mm", "Asia/Tashkent");
+        let endTime = moment.tz(test.endTime, "HH:mm", "Asia/Tashkent");
+        
+        if (now.isBefore(startTime)) {
             bot.sendMessage(chatId, `⏳ Test hali boshlanmagan! Test ${test.startTime} da boshlanadi.`);
             delete pendingActions[chatId];
             return;
-        } else if (now > endTime) {
+        } else if (now.isAfter(endTime)) {
             bot.sendMessage(chatId, `❌ Test vaqti tugagan! Test ${test.endTime} da tugagan.`);
             delete pendingActions[chatId];
             return;
         }
+        
 
         // 🔹 Test kodini kiritgandan so‘ng javoblarni qabul qilish uchun action o‘zgartirish
         pendingActions[chatId] = { action: "waiting_for_answer", testId: test.code };
@@ -292,16 +296,19 @@ bot.on('message', async (msg) => {
             delete pendingActions[chatId];
             return;
         }
-
-        let now = new Date();
-        let [startHour, startMinute] = test.startTime.split(':').map(Number);
-        let [endHour, endMinute] = test.endTime.split(':').map(Number);
-
-        let startTime = new Date(now);
-        startTime.setHours(startHour, startMinute, 0, 0);
-
-        let endTime = new Date(now);
-        endTime.setHours(endHour, endMinute, 0, 0);
+        
+        let now = moment().tz("Asia/Tashkent");
+        let startTime = moment.tz(test.startTime, "HH:mm", "Asia/Tashkent");
+        let endTime = moment.tz(test.endTime, "HH:mm", "Asia/Tashkent");
+        
+        if (now.isBefore(startTime)) {
+            bot.sendMessage(chatId, `⏳ Test hali boshlanmagan! Test ${test.startTime} da boshlanadi.`);
+            return;
+        } else if (now.isAfter(endTime)) {
+            bot.sendMessage(chatId, `⛔ Test vaqti tugagan! Test ${test.endTime} da tugagan.`);
+            return;
+        }
+        
 
         if (now < startTime) {
             bot.sendMessage(chatId, `⏳ Test hali boshlanmagan! Test ${test.startTime} da boshlanadi.`);
