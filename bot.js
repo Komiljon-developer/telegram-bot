@@ -10,7 +10,7 @@ const ADMIN_ID = process.env.ADMIN_ID;
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 const COURSES_FILE = './courses.json';
 const TESTS_FILE = './tests.json';
-
+const moment = require('moment-timezone');
 let adminSessions = new Set();
 let pendingActions = {};
 
@@ -200,42 +200,47 @@ bot.on('message', async (msg) => {
         delete pendingActions[chatId];
     }
 
-    // ➕ Test qo‘shish (vaqt qo'shildi)
-    else if (text === "Test qo‘shish") {
-        pendingActions[chatId] = { action: 'add_test' };
-        bot.sendMessage(chatId, "Test kodi kiriting:");
-    }
-
-    else if (pendingActions[chatId]?.action === 'add_test' && !pendingActions[chatId].code) {
-        pendingActions[chatId].code = text;
-        bot.sendMessage(chatId, "Test uchun to‘g‘ri javoblarni kiriting (masalan: ABCDCBA):");
-    }
-
-    else if (pendingActions[chatId]?.action === 'add_test' && pendingActions[chatId].code && !pendingActions[chatId].correctAnswers) {
-        pendingActions[chatId].correctAnswers = text.toUpperCase().split('');
-        bot.sendMessage(chatId, "Test boshlanish va tugash vaqtini HH:MM-HH:MM formatida kiriting (masalan: 20:00-22:00):");
-    }
+    
 
     else if (pendingActions[chatId]?.action === 'add_test' && pendingActions[chatId].correctAnswers) {
         let timeRange = text.split('-');
+    
+        // Formatni tekshirish
         if (timeRange.length !== 2 || !/^\d{2}:\d{2}$/.test(timeRange[0]) || !/^\d{2}:\d{2}$/.test(timeRange[1])) {
-            bot.sendMessage(chatId, "❌ Noto‘g‘ri format! Vaqtni HH:MM-HH:MM ko‘rinishida kiriting.");
+            bot.sendMessage(chatId, "❌ Noto‘g‘ri format! Vaqtni HH:MM-HH:MM shaklida kiriting (masalan: 20:00-22:00).");
             return;
         }
-
+    
+        // Vaqtni moment.js yordamida formatlash
+        let startTime = moment.tz(timeRange[0], "HH:mm", "Asia/Tashkent");
+        let endTime = moment.tz(timeRange[1], "HH:mm", "Asia/Tashkent");
+    
+        // Vaqtni tekshirish
+        if (!startTime.isValid() || !endTime.isValid()) {
+            bot.sendMessage(chatId, "❌ Noto‘g‘ri vaqt! HH:MM formatida yozing.");
+            return;
+        }
+    
+        if (startTime.isAfter(endTime)) {
+            bot.sendMessage(chatId, "❌ Xatolik! Test boshlanish vaqti tugash vaqtidan oldin bo‘lishi kerak.");
+            return;
+        }
+    
         let tests = loadTests();
         tests.push({
             code: pendingActions[chatId].code,
             correctAnswers: pendingActions[chatId].correctAnswers,
-            startTime: timeRange[0],
-            endTime: timeRange[1],
+            startTime: startTime.format("HH:mm"),
+            endTime: endTime.format("HH:mm"),
             results: []
         });
-
+    
         saveTests(tests);
-        bot.sendMessage(chatId, ` ✅ Test "${pendingActions[chatId].code}" qo‘shildi.`);
+        bot.sendMessage(chatId, `✅ Test "${pendingActions[chatId].code}" muvaffaqiyatli qo‘shildi!\n🕒 Boshlanish vaqti: ${startTime.format("HH:mm")}\n⏳ Tugash vaqti: ${endTime.format("HH:mm")}`);
+        
         delete pendingActions[chatId];
     }
+    
 
     // 🎯 Test topshirish (foydalanuvchi test kodini kiritishi kerak)
     else if (text === "Test") {
