@@ -16,7 +16,8 @@ let pendingActions = {};
 
 // Test javoblari saqlanadigan obyekt
 let correctAnswers = {};
-
+// ✅ Test natijalarini avtomatik tekshirishni boshlash
+scheduleTestResults(bot);
 
 
 
@@ -45,7 +46,7 @@ function loadTests() {
     }
 }
 
-function saveTestResult(testCode, user, userAnswers, score) {
+function saveTestResult(testCode, userId, userAnswers, score, username) {
     let tests = loadTests();
     let test = tests.find(t => String(t.code) === String(testCode));
 
@@ -58,21 +59,19 @@ function saveTestResult(testCode, user, userAnswers, score) {
         test.results = [];
     }
 
-    // ✅ Username bor yoki yo‘qligini tekshiramiz
-    let username = user.username ? `@${user.username}` : `ID:${user.id}`;
-
-    let existingResult = test.results.find(r => r.userId === user.id);
+    let existingResult = test.results.find(r => r.userId === userId);
     if (existingResult) {
         existingResult.score = score;
         existingResult.userAnswers = userAnswers;
-        existingResult.username = username; // ✅ Username ni saqlaymiz
+        existingResult.username = username || null; // Agar username bo‘lsa, saqlaymiz
     } else {
-        test.results.push({ userId: user.id, username, userAnswers, score });
+        test.results.push({ userId, userAnswers, score, username: username || null });
     }
 
     fs.writeFileSync(TESTS_FILE, JSON.stringify(tests, null, 2), 'utf8');
-    console.log("✅ Natija saqlandi:", { testCode, username, userAnswers, score });
+    console.log("✅ Natija saqlandi:", { testCode, userId, userAnswers, score, username });
 }
+
 
 
 function getTestResults(testCode) {
@@ -97,6 +96,48 @@ function getTestResults(testCode) {
            `🏆 **G'olib:** ${topUser.username} - ${topUser.score} ball!`;
 }
 
+function scheduleTestResults(bot) {
+    let tests = loadTests();
+
+    tests.forEach(test => {
+        let now = moment().tz("Asia/Tashkent").format("HH:mm");
+        let endTime = test.endTime;
+
+        if (now >= endTime && !test.resultsSent) {
+            if (!test.results || test.results.length === 0) {
+                bot.sendMessage(test.ownerId, `📊 *Test: ${test.code} Natijalari*\n\n❌ Hech kim ushbu testni ishlamadi.`);
+                test.resultsSent = true;
+                fs.writeFileSync(TESTS_FILE, JSON.stringify(tests, null, 2), 'utf8');
+                return;
+            }
+
+            // Foydalanuvchilarni ball bo‘yicha saralash (katta ball yuqorida bo‘lsin)
+            let sortedResults = test.results.sort((a, b) => b.score - a.score);
+
+            let winners = sortedResults[0]; // Eng yuqori ball egasi
+            let resultsText = `📊 *Test: ${test.code} Natijalari*\n\n`;
+
+            sortedResults.forEach((user, index) => {
+                let username = user.username ? `@${user.username}` : `ID:${user.userId}`;
+                resultsText += `${index + 1}. ${username} - ${user.score} ball (${user.userAnswers})\n`;
+            });
+
+            resultsText += `\n🏆 **G'olib:** ${winners.username ? `@${winners.username}` : `ID:${winners.userId}`} - ${winners.score} ball!`;
+
+            // Natijalarni botga yuborish
+            bot.sendMessage(test.ownerId, resultsText, { parse_mode: "Markdown" });
+
+            // Natijalar yuborilganini belgilaymiz
+            test.resultsSent = true;
+            fs.writeFileSync(TESTS_FILE, JSON.stringify(tests, null, 2), 'utf8');
+
+            console.log(`📢 Test ${test.code} natijalari chiqarildi!`);
+        }
+    });
+
+    // Har 1 daqiqada tekshirish
+    setTimeout(() => scheduleTestResults(bot), 60000);
+}
 
 
 function saveTests(tests) {
@@ -342,50 +383,22 @@ bot.on('message', async (msg) => {
             return;
         }
     
-        let correctAnswers = test.correctAnswers;
-        if (!correctAnswers) {
-            bot.sendMessage(chatId, "❌ Xatolik: Test uchun to'g'ri javoblar topilmadi.");
-            return;
-        }
-    
-        let correctAnswersArray = Array.isArray(correctAnswers) ? correctAnswers : Object.values(correctAnswers);
-    
-        if (correctAnswersArray.length === 0) {
-            bot.sendMessage(chatId, "❌ Xatolik: Test uchun to'g'ri javoblar mavjud emas.");
-            return;
-        }
-    
         let userAnswers = text.trim().toUpperCase().split('');
+        let correctAnswersArray = Array.isArray(test.correctAnswers) ? test.correctAnswers : Object.values(test.correctAnswers);
     
         if (userAnswers.length !== correctAnswersArray.length) {
             bot.sendMessage(chatId, `❌ Xatolik: Siz ${correctAnswersArray.length} ta javob kiritishingiz kerak!`);
             return;
         }
     
-        let results = userAnswers.map((answer, index) => {
-            return `${answer} ${answer === correctAnswersArray[index] ? '✅' : '❌'}`;
-        });
-    
         let score = userAnswers.filter((answer, index) => answer === correctAnswersArray[index]).length;
-        let percentage = ((score / correctAnswersArray.length) * 100).toFixed(2);
+        let username = msg.from.username || null; // Username bor yoki yo‘qligini tekshiramiz
     
-        // ✅ Foydalanuvchining username yoki ID sini olish
-        let user = msg.from;
-        let username = user.username ? `@${user.username}` : `ID:${user.id}`;
+        saveTestResult(test.code, chatId, userAnswers.join(''), score, username);
     
-        saveTestResult(test.code, username, userAnswers.join(''), score);
-    
-        bot.sendMessage(
-            chatId,
-            `📊 Sizning natijangiz:\n${results.join('\n')}\n\n✅ To'g'ri javoblar: ${score}/${correctAnswersArray.length}\n📈 Foiz: ${percentage}%`
-        );
-    
-        // ✅ Agar test tugagan bo‘lsa, umumiy natijalarni chiqaramiz
-        if (now >= test.endTime) {
-            let resultMessage = getTestResults(test.code);
-            bot.sendMessage(chatId, resultMessage);
-        }
+        bot.sendMessage(chatId, `📊 Sizning natijangiz:\n✅ To'g'ri javoblar: ${score}/${correctAnswersArray.length}\n📈 Foiz: ${(score / correctAnswersArray.length * 100).toFixed(2)}%`);
     }
+    
     
     
     
