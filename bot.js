@@ -319,24 +319,25 @@ bot.on('message', async (msg) => {
         }
     
         let userAnswers = text.trim().toUpperCase().split('');
-        
-        // ✅ Testning to'g'ri javoblarini olish
-        let correctAnswers = test.correctAnswers || ""; // Agar `correctAnswers` bo'sh bo'lsa, "" qilib olish
-        let correctAnswersArray = correctAnswers.split('');
-    
-        bot.sendMessage(chatId, `✅ *To'g'ri javoblar:* ${correctAnswersArray.join(', ')}`);
+        let correctAnswersArray = Array.isArray(correctAnswers) ? correctAnswers : Object.values(correctAnswers);
     
         if (userAnswers.length !== correctAnswersArray.length) {
             bot.sendMessage(chatId, `❌ Xatolik: Siz ${correctAnswersArray.length} ta javob kiritishingiz kerak!`);
             return;
         }
     
-        // ✅ To'g'ri javoblarni hisoblash
+        // ✅ Natijalarni solishtirish va belgilash
+        let results = userAnswers.map((answer, index) => {
+            return `${answer} ${answer === correctAnswersArray[index] ? '✅' : '❌'}`;
+        });
+    
         let score = userAnswers.filter((answer, index) => answer === correctAnswersArray[index]).length;
+        let percentage = ((score / correctAnswersArray.length) * 100).toFixed(2);
+    
         saveTestResult(test.code, chatId, userAnswers.join(''), score);
     
         // 📝 Foydalanuvchiga natijani yuborish
-        bot.sendMessage(chatId, `✅ Test yakunlandi! Sizning natijangiz: ${score}/${correctAnswersArray.length}`);
+        bot.sendMessage(chatId, `📊 Sizning natijangiz:\n${results.join('\n')}\n\n✅ To'g'ri javoblar: ${score}/${correctAnswersArray.length}\n📈 Foiz: ${percentage}%`);
     }
     
     
