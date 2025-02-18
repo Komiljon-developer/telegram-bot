@@ -105,6 +105,10 @@ function scheduleTestResults(bot) {
 
         if (now >= endTime && !test.resultsSent) {
             if (!test.results || test.results.length === 0) {
+                if (!test.ownerId) {
+                    console.error(`❌ Xatolik: test.ownerId aniqlanmadi! Test: ${test.code}`);
+                    return;
+                }
                 bot.sendMessage(test.ownerId, `📊 *Test: ${test.code} Natijalari*\n\n❌ Hech kim ushbu testni ishlamadi.`);
                 test.resultsSent = true;
                 fs.writeFileSync(TESTS_FILE, JSON.stringify(tests, null, 2), 'utf8');
@@ -113,10 +117,8 @@ function scheduleTestResults(bot) {
 
             // ✅ Foydalanuvchilarni ball bo‘yicha saralash
             let sortedResults = test.results.sort((a, b) => b.score - a.score);
-
-            // ✅ Eng yuqori ball topiladi
             let highestScore = sortedResults[0].score;
-            let winners = sortedResults.filter(user => user.score === highestScore); // Bir nechta g'olib bo'lishi mumkin
+            let winners = sortedResults.filter(user => user.score === highestScore);
 
             let resultsText = `📊 *Test: ${test.code} Natijalari*\n\n`;
 
@@ -125,14 +127,17 @@ function scheduleTestResults(bot) {
                 resultsText += `${index + 1}. ${username} - ${user.score} ball (${user.userAnswers})\n`;
             });
 
-            // 🏆 **G‘oliblar** (Agar bir nechta bo‘lsa, hammasi chiqadi)
             let winnerText = winners.map(user => user.username ? `@${user.username}` : `ID:${user.userId}`).join(', ');
             resultsText += `\n🏆 **G'olib:** ${winnerText} - ${highestScore} ball!`;
 
-            // ✅ Natijalarni botga yuborish
-            bot.sendMessage(test.ownerId, resultsText, { parse_mode: "Markdown" });
+            if (!test.ownerId) {
+                console.error(`❌ Xatolik: test.ownerId aniqlanmadi! Test: ${test.code}`);
+                return;
+            }
 
-            // ✅ Natijalar yuborilganini belgilaymiz
+            bot.sendMessage(test.ownerId, resultsText, { parse_mode: "Markdown" })
+                .catch(err => console.error(`❌ Xabar yuborishda xatolik:`, err.message));
+
             test.resultsSent = true;
             fs.writeFileSync(TESTS_FILE, JSON.stringify(tests, null, 2), 'utf8');
 
@@ -143,6 +148,7 @@ function scheduleTestResults(bot) {
     // Har 1 daqiqada tekshirish
     setTimeout(() => scheduleTestResults(bot), 60000);
 }
+
 
 
 function saveTests(tests) {
