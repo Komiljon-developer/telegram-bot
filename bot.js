@@ -111,10 +111,13 @@ function scheduleTestResults(bot) {
                 return;
             }
 
-            // Foydalanuvchilarni ball bo‘yicha saralash (katta ball yuqorida bo‘lsin)
+            // ✅ Foydalanuvchilarni ball bo‘yicha saralash
             let sortedResults = test.results.sort((a, b) => b.score - a.score);
 
-            let winners = sortedResults[0]; // Eng yuqori ball egasi
+            // ✅ Eng yuqori ball topiladi
+            let highestScore = sortedResults[0].score;
+            let winners = sortedResults.filter(user => user.score === highestScore); // Bir nechta g'olib bo'lishi mumkin
+
             let resultsText = `📊 *Test: ${test.code} Natijalari*\n\n`;
 
             sortedResults.forEach((user, index) => {
@@ -122,12 +125,14 @@ function scheduleTestResults(bot) {
                 resultsText += `${index + 1}. ${username} - ${user.score} ball (${user.userAnswers})\n`;
             });
 
-            resultsText += `\n🏆 **G'olib:** ${winners.username ? `@${winners.username}` : `ID:${winners.userId}`} - ${winners.score} ball!`;
+            // 🏆 **G‘oliblar** (Agar bir nechta bo‘lsa, hammasi chiqadi)
+            let winnerText = winners.map(user => user.username ? `@${user.username}` : `ID:${user.userId}`).join(', ');
+            resultsText += `\n🏆 **G'olib:** ${winnerText} - ${highestScore} ball!`;
 
-            // Natijalarni botga yuborish
+            // ✅ Natijalarni botga yuborish
             bot.sendMessage(test.ownerId, resultsText, { parse_mode: "Markdown" });
 
-            // Natijalar yuborilganini belgilaymiz
+            // ✅ Natijalar yuborilganini belgilaymiz
             test.resultsSent = true;
             fs.writeFileSync(TESTS_FILE, JSON.stringify(tests, null, 2), 'utf8');
 
