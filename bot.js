@@ -303,19 +303,17 @@ bot.on('message', async (msg) => {
         }
     
         let now = moment().tz("Asia/Tashkent").format("HH:mm");
-        let startTime = test.startTime;
-        let endTime = test.endTime;
     
-        if (now < startTime) {
-            bot.sendMessage(chatId, `⏳ Test hali boshlanmagan! Test ${test.startTime} da boshlanadi.`);
+        if (now < test.startTime) {
+            bot.sendMessage(chatId, `⏳ Test hali boshlanmagan!`);
             return;
-        } else if (now > endTime) {
-            bot.sendMessage(chatId, `⛔ Test vaqti tugagan! Test ${test.endTime} da tugagan.`);
+        }
+        if (now > test.endTime) {
+            bot.sendMessage(chatId, `⛔ Test vaqti tugagan!`);
             return;
         }
     
-        // 🔹 Foydalanuvchining javoblarini tekshirish
-        let userAnswers = text.toUpperCase().split('');
+        let userAnswers = text.trim().toUpperCase().split('');
         let correctAnswers = test.correctAnswers;
     
         if (userAnswers.length !== correctAnswers.length) {
@@ -334,9 +332,7 @@ bot.on('message', async (msg) => {
             }
         });
     
-        let tests = loadTests(); // ✅ Testlar ro‘yxatini yuklash
-    
-        // 🔹 Natijalarni test bazasiga saqlash
+        let tests = loadTests();
         test.results.push({
             id: msg.chat.id,
             name: msg.from.first_name || "Ism yo'q",
@@ -344,7 +340,7 @@ bot.on('message', async (msg) => {
             correct: correctCount
         });
     
-        saveTests(tests); // ✅ Xatolik endi yuzaga kelmaydi
+        saveTests(tests);
     
         let percentage = Math.round((correctCount / correctAnswers.length) * 100);
     
@@ -361,6 +357,7 @@ bot.on('message', async (msg) => {
         bot.sendMessage(chatId, resultMessage, { parse_mode: "Markdown" });
         delete pendingActions[chatId];
     }
+    
     
 
 
