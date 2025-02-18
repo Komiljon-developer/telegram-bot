@@ -13,6 +13,9 @@ const TESTS_FILE = './tests.json';
 const moment = require('moment-timezone');
 let adminSessions = new Set();
 let pendingActions = {};
+// Test javoblari saqlanadigan obyekt
+let correctAnswers = {};
+
 
 function loadCourses() {
     if (!fs.existsSync(COURSES_FILE)) fs.writeFileSync(COURSES_FILE, JSON.stringify([]));
@@ -357,6 +360,7 @@ bot.on('message', async (msg) => {
         bot.sendMessage(chatId, resultMessage, { parse_mode: "Markdown" });
         delete pendingActions[chatId];
     }
+    
     
     
 
