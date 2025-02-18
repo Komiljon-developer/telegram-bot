@@ -267,31 +267,32 @@ bot.on('message', async (msg) => {
     else if (pendingActions[chatId]?.action === 'enter_test_code') {
         let tests = loadTests();
         let test = tests.find(t => t.code === text);
-
+    
         if (!test) {
             bot.sendMessage(chatId, "❌ Bunday test topilmadi.");
             delete pendingActions[chatId];
             return;
         }
-
-        let now = moment().tz("Asia/Tashkent"); // Hozirgi vaqt
-        let startTime = moment(test.startTime, "HH:mm").tz("Asia/Tashkent");
-        let endTime = moment(test.endTime, "HH:mm").tz("Asia/Tashkent");
-
-        if (now.isBefore(startTime)) {
+    
+        let now = moment().tz("Asia/Tashkent").format("HH:mm"); // Joriy vaqtni olish
+        let startTime = test.startTime; // Test boshlanish vaqti
+        let endTime = test.endTime; // Test tugash vaqti
+    
+        if (now < startTime) {
             bot.sendMessage(chatId, `⏳ Test hali boshlanmagan! Test ${test.startTime} da boshlanadi.`);
             delete pendingActions[chatId];
             return;
-        } else if (now.isAfter(endTime)) {
+        } else if (now > endTime) {
             bot.sendMessage(chatId, `❌ Test vaqti tugagan! Test ${test.endTime} da tugagan.`);
             delete pendingActions[chatId];
             return;
         }
-
-        // ✅ Test boshlash
+    
+        // ✅ Testni boshlash
         pendingActions[chatId] = { action: "waiting_for_answer", testId: test.code };
         bot.sendMessage(chatId, "✅ Test boshlandi! Endi javoblaringizni yuboring.");
     }
+    
 
     // ✅ Test javoblarini qabul qilish
     else if (pendingActions[chatId]?.action === "waiting_for_answer") {
