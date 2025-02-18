@@ -14,7 +14,9 @@ const moment = require('moment-timezone');
 let adminSessions = new Set();
 let pendingActions = {};
 // Test javoblari saqlanadigan obyekt
-let correctAnswers = {};
+let correctAnswersArray = Array.isArray(correctAnswers) ? correctAnswers : String(correctAnswers).split('');
+bot.sendMessage(chatId, `✅ *To'g'ri javoblar:* ${correctAnswersArray.join(', ')}`);
+
 
 
 function loadCourses() {
@@ -43,29 +45,28 @@ function loadTests() {
 }
 
 function saveTestResult(testCode, userId, userAnswers, score) {
-    let tests = loadTests(); // `test.json` faylidan barcha testlarni yuklash
-    let test = tests.find(t => String(t.code) === String(testCode)); // Berilgan kod bo‘yicha testni topish
+    let tests = loadTests();
+    let test = tests.find(t => String(t.code) === String(testCode));
 
     if (!test) {
         console.error("❌ Xatolik: Test topilmadi!");
         return;
     }
 
-    // Agar testda `results` bo‘lmasa, uni yaratamiz
     if (!Array.isArray(test.results)) {
         test.results = [];
     }
 
-    // ❗️ Natija allaqachon mavjudligini tekshiramiz (yo‘q bo‘lsa, qo‘shamiz)
     let existingResult = test.results.find(r => r.userId === userId);
     if (existingResult) {
-        existingResult.score = score; // Agar foydalanuvchi natijasi bor bo‘lsa, yangilaymiz
+        existingResult.score = score;
+        existingResult.userAnswers = userAnswers;
     } else {
-        test.results.push({ userId, userAnswers, score }); // Yangi natijani qo‘shamiz
+        test.results.push({ userId, userAnswers, score });
     }
 
-    // ✅ Yangilangan `tests` massivini `test.json` fayliga saqlaymiz
-    fs.writeFileSync('test.json', JSON.stringify(tests, null, 2), 'utf8');
+    // ❗️ Bu joyni to'g'riladik
+    fs.writeFileSync(TESTS_FILE, JSON.stringify(tests, null, 2), 'utf8');
 
     console.log("✅ Natija saqlandi:", { testCode, userId, userAnswers, score });
 }
@@ -317,49 +318,21 @@ bot.on('message', async (msg) => {
         }
     
         let userAnswers = text.trim().toUpperCase().split('');
-        let correctAnswers = test.correctAnswers;
+        let correctAnswers = test.correctAnswers.split(''); // Bu joyda xatoni to'g'riladik
     
         if (userAnswers.length !== correctAnswers.length) {
             bot.sendMessage(chatId, `❌ Xatolik: Siz ${correctAnswers.length} ta javob kiritishingiz kerak!`);
             return;
         }
     
-        let correctCount = 0;
-        let incorrectAnswers = [];
+        // ✅ To'g'ri javoblarni hisoblash
+        let score = userAnswers.filter((answer, index) => answer === correctAnswers[index]).length;
+        saveTestResult(test.code, chatId, userAnswers.join(''), score);
     
-        userAnswers.forEach((ans, i) => {
-            if (ans === correctAnswers[i]) {
-                correctCount++;
-            } else {
-                incorrectAnswers.push(`${i + 1}-savol: ❌ Sizning javobingiz: ${ans}, ✅ To‘g‘ri javob: ${correctAnswers[i]}`);
-            }
-        });
-    
-        let tests = loadTests();
-        test.results.push({
-            id: msg.chat.id,
-            name: msg.from.first_name || "Ism yo'q",
-            username: msg.from.username || "Username yo'q",
-            correct: correctCount
-        });
-    
-        saveTests(tests);
-    
-        let percentage = Math.round((correctCount / correctAnswers.length) * 100);
-    
-        let resultMessage = `📋 *Test natijalari:*
-    
-    ✅ *To'g'ri javoblar:* ${correctAnswers.join(', ')}
-    📥 *Sizning javoblaringiz:* ${userAnswers.join(', ')}
-    🎯 *To'g'ri javoblar soni:* ${correctCount}/${correctAnswers.length} (${percentage}%)\n\n`;
-    
-        if (incorrectAnswers.length > 0) {
-            resultMessage += `🚨 *Xatolar:* \n` + incorrectAnswers.join('\n');
-        }
-    
-        bot.sendMessage(chatId, resultMessage, { parse_mode: "Markdown" });
-        delete pendingActions[chatId];
+        // 📝 Foydalanuvchiga natijani yuborish
+        bot.sendMessage(chatId, `✅ Test yakunlandi! Sizning natijangiz: ${score}/${correctAnswers.length}`);
     }
+    
     
     
     
