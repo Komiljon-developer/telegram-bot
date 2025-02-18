@@ -374,30 +374,51 @@ bot.on('message', async (msg) => {
     
         let now = moment().tz("Asia/Tashkent").format("HH:mm");
     
-        if (now < test.startTime) {
-            bot.sendMessage(chatId, `⏳ Test hali boshlanmagan!`);
-            return;
-        }
+        // ✅ Agar test vaqti tugagan bo'lsa, javoblarni qabul qilmaymiz
         if (now > test.endTime) {
-            bot.sendMessage(chatId, `⛔ Test vaqti tugagan!`);
+            bot.sendMessage(chatId, `⛔ Test vaqti tugagan! Endi javob yuborish mumkin emas.`);
+            delete pendingActions[chatId];  // 🔥 Foydalanuvchini test rejimidan chiqaramiz
             return;
         }
     
+        // ✅ To'g'ri javoblar test obyektidan olinadi
+        let correctAnswers = test.correctAnswers;
+        if (!correctAnswers) {
+            bot.sendMessage(chatId, "❌ Xatolik: Test uchun to'g'ri javoblar topilmadi.");
+            return;
+        }
+    
+        let correctAnswersArray = Array.isArray(correctAnswers) ? correctAnswers : Object.values(correctAnswers);
+        if (correctAnswersArray.length === 0) {
+            bot.sendMessage(chatId, "❌ Xatolik: Test uchun to'g'ri javoblar mavjud emas.");
+            return;
+        }
+    
+        // ✅ Foydalanuvchining javoblarini qayta ishlash
         let userAnswers = text.trim().toUpperCase().split('');
-        let correctAnswersArray = Array.isArray(test.correctAnswers) ? test.correctAnswers : Object.values(test.correctAnswers);
     
         if (userAnswers.length !== correctAnswersArray.length) {
             bot.sendMessage(chatId, `❌ Xatolik: Siz ${correctAnswersArray.length} ta javob kiritishingiz kerak!`);
             return;
         }
     
+        // ✅ Natijalarni solishtirish va belgilash
+        let results = userAnswers.map((answer, index) => {
+            return `${answer} ${answer === correctAnswersArray[index] ? '✅' : '❌'}`;
+        });
+    
         let score = userAnswers.filter((answer, index) => answer === correctAnswersArray[index]).length;
-        let username = msg.from.username || null; // Username bor yoki yo‘qligini tekshiramiz
+        let percentage = ((score / correctAnswersArray.length) * 100).toFixed(2);
     
-        saveTestResult(test.code, chatId, userAnswers.join(''), score, username);
+        saveTestResult(test.code, chatId, userAnswers.join(''), score);
     
-        bot.sendMessage(chatId, `📊 Sizning natijangiz:\n✅ To'g'ri javoblar: ${score}/${correctAnswersArray.length}\n📈 Foiz: ${(score / correctAnswersArray.length * 100).toFixed(2)}%`);
+        // 📝 Foydalanuvchiga natijani yuborish
+        bot.sendMessage(
+            chatId,
+            `📊 Sizning natijangiz:\n${results.join('\n')}\n\n✅ To'g'ri javoblar: ${score}/${correctAnswersArray.length}\n📈 Foiz: ${percentage}%`
+        );
     }
+    
     
     
     
