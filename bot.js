@@ -13,9 +13,10 @@ const TESTS_FILE = './tests.json';
 const moment = require('moment-timezone');
 let adminSessions = new Set();
 let pendingActions = {};
+
 // Test javoblari saqlanadigan obyekt
-let correctAnswersArray = Array.isArray(correctAnswers) ? correctAnswers : String(correctAnswers).split('');
-bot.sendMessage(chatId, `✅ *To'g'ri javoblar:* ${correctAnswersArray.join(', ')}`);
+let correctAnswers = {};
+
 
 
 
@@ -318,7 +319,10 @@ bot.on('message', async (msg) => {
         }
     
         let userAnswers = text.trim().toUpperCase().split('');
-        let correctAnswers = test.correctAnswers.split(''); // Bu joyda xatoni to'g'riladik
+        let correctAnswersArray = Array.isArray(correctAnswers) ? correctAnswers : Object.values(correctAnswers);
+        bot.sendMessage(chatId, `✅ *To'g'ri javoblar:* ${correctAnswersArray.join(', ')}`);
+        
+
     
         if (userAnswers.length !== correctAnswers.length) {
             bot.sendMessage(chatId, `❌ Xatolik: Siz ${correctAnswers.length} ta javob kiritishingiz kerak!`);
