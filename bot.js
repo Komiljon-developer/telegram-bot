@@ -45,7 +45,7 @@ function loadTests() {
     }
 }
 
-function saveTestResult(testCode, userId, userAnswers, score) {
+function saveTestResult(testCode, user, userAnswers, score) {
     let tests = loadTests();
     let test = tests.find(t => String(t.code) === String(testCode));
 
@@ -58,18 +58,43 @@ function saveTestResult(testCode, userId, userAnswers, score) {
         test.results = [];
     }
 
-    let existingResult = test.results.find(r => r.userId === userId);
+    // ✅ Username bor yoki yo‘qligini tekshiramiz
+    let username = user.username ? `@${user.username}` : `ID:${user.id}`;
+
+    let existingResult = test.results.find(r => r.userId === user.id);
     if (existingResult) {
         existingResult.score = score;
         existingResult.userAnswers = userAnswers;
+        existingResult.username = username; // ✅ Username ni saqlaymiz
     } else {
-        test.results.push({ userId, userAnswers, score });
+        test.results.push({ userId: user.id, username, userAnswers, score });
     }
 
-    // ❗️ Bu joyni to'g'riladik
     fs.writeFileSync(TESTS_FILE, JSON.stringify(tests, null, 2), 'utf8');
+    console.log("✅ Natija saqlandi:", { testCode, username, userAnswers, score });
+}
 
-    console.log("✅ Natija saqlandi:", { testCode, userId, userAnswers, score });
+
+function getTestResults(testCode) {
+    if (!testResults[testCode]) {
+        return "❌ Bu test bo‘yicha natijalar yo‘q.";
+    }
+
+    let results = Object.entries(testResults[testCode]).map(([username, data]) => {
+        return { username, ...data };
+    });
+
+    results.sort((a, b) => b.score - a.score);
+
+    let topUser = results[0];
+
+    let userList = results.map((res, index) => 
+        `${index + 1}. ${res.username} - ${res.score} ball (${res.answers})`
+    ).join("\n");
+
+    return `📊 **Test: ${testCode} Natijalari**\n\n` + 
+           `${userList}\n\n` + 
+           `🏆 **G'olib:** ${topUser.username} - ${topUser.score} ball!`;
 }
 
 
@@ -317,7 +342,6 @@ bot.on('message', async (msg) => {
             return;
         }
     
-        // ✅ To'g'ri javoblar test obyektidan olinadi
         let correctAnswers = test.correctAnswers;
         if (!correctAnswers) {
             bot.sendMessage(chatId, "❌ Xatolik: Test uchun to'g'ri javoblar topilmadi.");
@@ -331,7 +355,6 @@ bot.on('message', async (msg) => {
             return;
         }
     
-        // ✅ Foydalanuvchining javoblarini qayta ishlash
         let userAnswers = text.trim().toUpperCase().split('');
     
         if (userAnswers.length !== correctAnswersArray.length) {
@@ -339,7 +362,6 @@ bot.on('message', async (msg) => {
             return;
         }
     
-        // ✅ Natijalarni solishtirish va belgilash
         let results = userAnswers.map((answer, index) => {
             return `${answer} ${answer === correctAnswersArray[index] ? '✅' : '❌'}`;
         });
@@ -347,14 +369,24 @@ bot.on('message', async (msg) => {
         let score = userAnswers.filter((answer, index) => answer === correctAnswersArray[index]).length;
         let percentage = ((score / correctAnswersArray.length) * 100).toFixed(2);
     
-        saveTestResult(test.code, chatId, userAnswers.join(''), score);
+        // ✅ Foydalanuvchining username yoki ID sini olish
+        let user = msg.from;
+        let username = user.username ? `@${user.username}` : `ID:${user.id}`;
     
-        // 📝 Foydalanuvchiga natijani yuborish
+        saveTestResult(test.code, username, userAnswers.join(''), score);
+    
         bot.sendMessage(
             chatId,
             `📊 Sizning natijangiz:\n${results.join('\n')}\n\n✅ To'g'ri javoblar: ${score}/${correctAnswersArray.length}\n📈 Foiz: ${percentage}%`
         );
+    
+        // ✅ Agar test tugagan bo‘lsa, umumiy natijalarni chiqaramiz
+        if (now >= test.endTime) {
+            let resultMessage = getTestResults(test.code);
+            bot.sendMessage(chatId, resultMessage);
+        }
     }
+    
     
     
     
