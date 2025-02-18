@@ -298,7 +298,6 @@ bot.on('message', async (msg) => {
         bot.sendMessage(chatId, "✅ Test boshlandi! Endi javoblaringizni yuboring.");
     }
     
-
     else if (pendingActions[chatId]?.action === "waiting_for_answer") {
         let test = loadTests().find(t => t.code === pendingActions[chatId].testId);
         if (!test) {
@@ -318,8 +317,22 @@ bot.on('message', async (msg) => {
             return;
         }
     
-        let userAnswers = text.trim().toUpperCase().split('');
+        // ✅ To'g'ri javoblar test obyektidan olinadi
+        let correctAnswers = test.correctAnswers;
+        if (!correctAnswers) {
+            bot.sendMessage(chatId, "❌ Xatolik: Test uchun to'g'ri javoblar topilmadi.");
+            return;
+        }
+    
         let correctAnswersArray = Array.isArray(correctAnswers) ? correctAnswers : Object.values(correctAnswers);
+    
+        if (correctAnswersArray.length === 0) {
+            bot.sendMessage(chatId, "❌ Xatolik: Test uchun to'g'ri javoblar mavjud emas.");
+            return;
+        }
+    
+        // ✅ Foydalanuvchining javoblarini qayta ishlash
+        let userAnswers = text.trim().toUpperCase().split('');
     
         if (userAnswers.length !== correctAnswersArray.length) {
             bot.sendMessage(chatId, `❌ Xatolik: Siz ${correctAnswersArray.length} ta javob kiritishingiz kerak!`);
@@ -337,7 +350,10 @@ bot.on('message', async (msg) => {
         saveTestResult(test.code, chatId, userAnswers.join(''), score);
     
         // 📝 Foydalanuvchiga natijani yuborish
-        bot.sendMessage(chatId, `📊 Sizning natijangiz:\n${results.join('\n')}\n\n✅ To'g'ri javoblar: ${score}/${correctAnswersArray.length}\n📈 Foiz: ${percentage}%`);
+        bot.sendMessage(
+            chatId,
+            `📊 Sizning natijangiz:\n${results.join('\n')}\n\n✅ To'g'ri javoblar: ${score}/${correctAnswersArray.length}\n📈 Foiz: ${percentage}%`
+        );
     }
     
     
