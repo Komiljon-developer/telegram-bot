@@ -263,7 +263,7 @@ bot.on('message', async (msg) => {
         bot.sendMessage(chatId, "📌 Iltimos, test kodini kiriting:");
     }
 
-    // Test kodini tekshirish va testni boshlash
+    // ✅ Test kodini tekshirish va testni boshlash
     else if (pendingActions[chatId]?.action === 'enter_test_code') {
         let tests = loadTests();
         let test = tests.find(t => t.code === text);
@@ -274,9 +274,9 @@ bot.on('message', async (msg) => {
             return;
         }
 
-        let now = moment().tz("Asia/Tashkent"); // Hozirgi vaqtni Toshkent vaqti bilan olish
-        let startTime = moment.tz(test.startTime, "HH:mm", "Asia/Tashkent");
-        let endTime = moment.tz(test.endTime, "HH:mm", "Asia/Tashkent");
+        let now = moment().tz("Asia/Tashkent"); // Hozirgi vaqt
+        let startTime = moment(test.startTime, "HH:mm").tz("Asia/Tashkent");
+        let endTime = moment(test.endTime, "HH:mm").tz("Asia/Tashkent");
 
         if (now.isBefore(startTime)) {
             bot.sendMessage(chatId, `⏳ Test hali boshlanmagan! Test ${test.startTime} da boshlanadi.`);
@@ -288,13 +288,12 @@ bot.on('message', async (msg) => {
             return;
         }
 
-
-        // 🔹 Test kodini kiritgandan so‘ng javoblarni qabul qilish uchun action o‘zgartirish
+        // ✅ Test boshlash
         pendingActions[chatId] = { action: "waiting_for_answer", testId: test.code };
         bot.sendMessage(chatId, "✅ Test boshlandi! Endi javoblaringizni yuboring.");
     }
 
-    // Test javoblarini qabul qilish
+    // ✅ Test javoblarini qabul qilish
     else if (pendingActions[chatId]?.action === "waiting_for_answer") {
         let test = loadTests().find(t => t.code === pendingActions[chatId].testId);
         if (!test) {
@@ -304,8 +303,8 @@ bot.on('message', async (msg) => {
         }
 
         let now = moment().tz("Asia/Tashkent");
-        let startTime = moment.tz(test.startTime, "HH:mm", "Asia/Tashkent");
-        let endTime = moment.tz(test.endTime, "HH:mm", "Asia/Tashkent");
+        let startTime = moment(test.startTime, "HH:mm").tz("Asia/Tashkent");
+        let endTime = moment(test.endTime, "HH:mm").tz("Asia/Tashkent");
 
         if (now.isBefore(startTime)) {
             bot.sendMessage(chatId, `⏳ Test hali boshlanmagan! Test ${test.startTime} da boshlanadi.`);
@@ -315,18 +314,9 @@ bot.on('message', async (msg) => {
             return;
         }
 
-
-        if (now < startTime) {
-            bot.sendMessage(chatId, `⏳ Test hali boshlanmagan! Test ${test.startTime} da boshlanadi.`);
-            return;
-        } else if (now > endTime) {
-            bot.sendMessage(chatId, `⛔ Test vaqti tugagan! Test ${test.endTime} da tugagan.`);
-            return;
-        }
-
-        // 🔹 Foydalanuvchining javoblarini tekshirish
+        // ✅ Foydalanuvchining javoblarini tekshirish
         let userAnswers = text.toUpperCase().split('');
-        let correctAnswers = test.correctAnswers;
+        let correctAnswers = test.correctAnswers.split('');
 
         if (userAnswers.length !== correctAnswers.length) {
             bot.sendMessage(chatId, `❌ Xatolik: Siz ${correctAnswers.length} ta javob kiritishingiz kerak!`);
@@ -344,34 +334,34 @@ bot.on('message', async (msg) => {
             }
         });
 
-        let tests = loadTests(); // ✅ Testlar ro‘yxatini yuklash
-
-        // 🔹 Natijalarni test bazasiga saqlash
-        test.results.push({
-            id: msg.chat.id,
-            name: msg.from.first_name || "Ism yo'q",
-            username: msg.from.username || "Username yo'q",
-            correct: correctCount
-        });
-
-        saveTests(tests); // ✅ Xatolik endi yuzaga kelmaydi
-
-
         let percentage = Math.round((correctCount / correctAnswers.length) * 100);
 
-        let resultMessage = `📋 *Test natijalari:*
-
-✅ *To'g'ri javoblar:* ${correctAnswers.join(', ')}
-📥 *Sizning javoblaringiz:* ${userAnswers.join(', ')}
-🎯 *To'g'ri javoblar soni:* ${correctCount}/${correctAnswers.length} (${percentage}%)\n\n`;
+        let resultMessage = `📋 *Test natijalari:*\n\n` +
+            `✅ *To'g'ri javoblar:* ${correctAnswers.join(', ')}\n` +
+            `📥 *Sizning javoblaringiz:* ${userAnswers.join(', ')}\n` +
+            `🎯 *To'g'ri javoblar soni:* ${correctCount}/${correctAnswers.length} (${percentage}%)\n\n`;
 
         if (incorrectAnswers.length > 0) {
             resultMessage += `🚨 *Xatolar:* \n` + incorrectAnswers.join('\n');
         }
 
+        // ✅ Natijani bazaga saqlash
+        let tests = loadTests();
+        let index = tests.findIndex(t => t.code === test.code);
+        if (index !== -1) {
+            tests[index].results.push({
+                id: chatId,
+                name: msg.from.first_name || "Ism yo'q",
+                username: msg.from.username || "Username yo'q",
+                correct: correctCount
+            });
+            saveTests(tests);
+        }
+
         bot.sendMessage(chatId, resultMessage, { parse_mode: "Markdown" });
         delete pendingActions[chatId];
     }
+
 
 
 
