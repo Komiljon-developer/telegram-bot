@@ -431,11 +431,7 @@ bot.on('message', async (msg) => {
     
     
     
-    
-
-
-
-    const escapeMarkdown = (text) => {
+    const escapeMarkdownV2 = (text) => {
         return text.replace(/[_*[\]()~`>#+\-=|{}.!]/g, '\\$&');
     };
     
@@ -465,21 +461,22 @@ bot.on('message', async (msg) => {
         let resultPromises = sortedResults.map((res, index) => {
             return bot.getChat(res.userId)
                 .then(user => {
-                    let userDisplayName = user.username ? `@${escapeMarkdown(user.username)}` : escapeMarkdown(user.first_name || "Noma’lum");
-                    return `🏅 *${index + 1}-o‘rin*\n👤 *Foydalanuvchi:* ${userDisplayName}\n🎯 *To‘g‘ri javoblar:* ${res.score}\n———————————————\n`;
+                    let userDisplayName = user.username ? `@${escapeMarkdownV2(user.username)}` : escapeMarkdownV2(user.first_name || "Noma’lum");
+                    return `🏅 *${index + 1}-o‘rin*\n👤 *Foydalanuvchi:* ${userDisplayName}\n🎯 *To‘g‘ri javoblar:* ${res.score}\n━━━━━━━━━━━━━━\n`;
                 })
                 .catch(() => {
-                    return `🏅 *${index + 1}-o‘rin*\n👤 *Foydalanuvchi:* Noma’lum\n🎯 *To‘g‘ri javoblar:* ${res.score}\n———————————————\n`;
+                    return `🏅 *${index + 1}-o‘rin*\n👤 *Foydalanuvchi:* Noma’lum\n🎯 *To‘g‘ri javoblar:* ${res.score}\n━━━━━━━━━━━━━━\n`;
                 });
         });
     
         Promise.all(resultPromises).then(results => {
-            let resultMessage = `📊 *Test natijalari (${escapeMarkdown(testCode)})*:\n\n` + results.join('');
+            let resultMessage = `📊 *Test natijalari \\(${escapeMarkdownV2(testCode)}\\)*:\n\n` + results.join('');
     
             bot.sendMessage(chatId, resultMessage, { parse_mode: "MarkdownV2" });
             delete pendingActions[chatId];
         });
     }
+    
     
     
 
