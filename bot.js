@@ -440,7 +440,8 @@ bot.on('message', async (msg) => {
     if (text === "Test natijalari") {
         pendingActions[chatId] = { action: 'enter_result_code' };
         bot.sendMessage(chatId, "📌 Iltimos, test kodini kiriting:");
-    } else if (pendingActions[chatId]?.action === 'enter_result_code') {
+    } 
+    else if (pendingActions[chatId]?.action === 'enter_result_code') {
         let testCode = text.trim();
         let tests = loadTests();
         let test = tests.find(t => String(t.code) === String(testCode));
