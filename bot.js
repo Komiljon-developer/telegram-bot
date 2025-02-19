@@ -17,7 +17,7 @@ let pendingActions = {};
 // Test javoblari saqlanadigan obyekt
 let correctAnswers = {};
 // ✅ Test natijalarini avtomatik tekshirishni boshlash
-scheduleTestResults(bot);
+// scheduleTestResults(bot);
 
 
 
@@ -96,58 +96,58 @@ function getTestResults(testCode) {
            `🏆 **G'olib:** ${topUser.username} - ${topUser.score} ball!`;
 }
 
-function scheduleTestResults(bot) {
-    let tests = loadTests();
+// function scheduleTestResults(bot) {
+//     let tests = loadTests();
 
-    tests.forEach(test => {
-        let now = moment().tz("Asia/Tashkent").format("HH:mm");
-        let endTime = test.endTime;
+//     tests.forEach(test => {
+//         let now = moment().tz("Asia/Tashkent").format("HH:mm");
+//         let endTime = test.endTime;
 
-        if (now >= endTime && !test.resultsSent) {
-            if (!test.results || test.results.length === 0) {
-                if (!test.ownerId) {
-                    console.error(`❌ Xatolik: test.ownerId aniqlanmadi! Test: ${test.code}`);
-                    return;
-                }
-                bot.sendMessage(test.ownerId, `📊 *Test: ${test.code} Natijalari*\n\n❌ Hech kim ushbu testni ishlamadi.`);
-                test.resultsSent = true;
-                fs.writeFileSync(TESTS_FILE, JSON.stringify(tests, null, 2), 'utf8');
-                return;
-            }
+//         if (now >= endTime && !test.resultsSent) {
+//             if (!test.results || test.results.length === 0) {
+//                 if (!test.ownerId) {
+//                     console.error(`❌ Xatolik: test.ownerId aniqlanmadi! Test: ${test.code}`);
+//                     return;
+//                 }
+//                 bot.sendMessage(test.ownerId, `📊 *Test: ${test.code} Natijalari*\n\n❌ Hech kim ushbu testni ishlamadi.`);
+//                 test.resultsSent = true;
+//                 fs.writeFileSync(TESTS_FILE, JSON.stringify(tests, null, 2), 'utf8');
+//                 return;
+//             }
 
-            // ✅ Foydalanuvchilarni ball bo‘yicha saralash
-            let sortedResults = test.results.sort((a, b) => b.score - a.score);
-            let highestScore = sortedResults[0].score;
-            let winners = sortedResults.filter(user => user.score === highestScore);
+//             // ✅ Foydalanuvchilarni ball bo‘yicha saralash
+//             let sortedResults = test.results.sort((a, b) => b.score - a.score);
+//             let highestScore = sortedResults[0].score;
+//             let winners = sortedResults.filter(user => user.score === highestScore);
 
-            let resultsText = `📊 *Test: ${test.code} Natijalari*\n\n`;
+//             let resultsText = `📊 *Test: ${test.code} Natijalari*\n\n`;
 
-            sortedResults.forEach((user, index) => {
-                let username = user.username ? `@${user.username}` : `ID:${user.userId}`;
-                resultsText += `${index + 1}. ${username} - ${user.score} ball (${user.userAnswers})\n`;
-            });
+//             sortedResults.forEach((user, index) => {
+//                 let username = user.username ? `@${user.username}` : `ID:${user.userId}`;
+//                 resultsText += `${index + 1}. ${username} - ${user.score} ball (${user.userAnswers})\n`;
+//             });
 
-            let winnerText = winners.map(user => user.username ? `@${user.username}` : `ID:${user.userId}`).join(', ');
-            resultsText += `\n🏆 **G'olib:** ${winnerText} - ${highestScore} ball!`;
+//             let winnerText = winners.map(user => user.username ? `@${user.username}` : `ID:${user.userId}`).join(', ');
+//             resultsText += `\n🏆 **G'olib:** ${winnerText} - ${highestScore} ball!`;
 
-            if (!test.ownerId) {
-                console.error(`❌ Xatolik: test.ownerId aniqlanmadi! Test: ${test.code}`);
-                return;
-            }
+//             if (!test.ownerId) {
+//                 console.error(`❌ Xatolik: test.ownerId aniqlanmadi! Test: ${test.code}`);
+//                 return;
+//             }
 
-            bot.sendMessage(test.ownerId, resultsText, { parse_mode: "Markdown" })
-                .catch(err => console.error(`❌ Xabar yuborishda xatolik:`, err.message));
+//             bot.sendMessage(test.ownerId, resultsText, { parse_mode: "Markdown" })
+//                 .catch(err => console.error(`❌ Xabar yuborishda xatolik:`, err.message));
 
-            test.resultsSent = true;
-            fs.writeFileSync(TESTS_FILE, JSON.stringify(tests, null, 2), 'utf8');
+//             test.resultsSent = true;
+//             fs.writeFileSync(TESTS_FILE, JSON.stringify(tests, null, 2), 'utf8');
 
-            console.log(`📢 Test ${test.code} natijalari chiqarildi!`);
-        }
-    });
+//             console.log(`📢 Test ${test.code} natijalari chiqarildi!`);
+//         }
+//     });
 
-    // Har 1 daqiqada tekshirish
-    setTimeout(() => scheduleTestResults(bot), 60000);
-}
+//     // Har 1 daqiqada tekshirish
+//     setTimeout(() => scheduleTestResults(bot), 60000);
+// }
 
 
 
@@ -442,55 +442,39 @@ bot.on('message', async (msg) => {
 
 
     //test natijalari
+    if (text === "Test natijalari") {
+        pendingActions[chatId] = { action: 'enter_result_code' };
+        bot.sendMessage(chatId, "📌 Iltimos, test kodini kiriting:");
+    } else if (pendingActions[chatId]?.action === 'enter_result_code') {
+        let testCode = text.trim();
+        let tests = loadTests();
+        let test = tests.find(t => String(t.code) === String(testCode));
 
-    // else if (text === "Test natijalari") {
-    //     bot.sendMessage(chatId, "📌 Iltimos, test kodini kiriting:");
-    //     pendingActions[chatId] = { action: 'enter_result_code' };
-    // }
+        if (!test) {
+            bot.sendMessage(chatId, "❌ Bunday test topilmadi. Iltimos, test kodini to‘g‘ri kiriting.");
+            return;
+        }
 
-    // else if (pendingActions[chatId]?.action === 'enter_result_code') {
-    //     let testCode = text.trim(); // Test kodini olish
-    //     let tests = loadTests(); // Barcha testlarni yuklash
-    //     let test = tests.find(t => String(t.code) === String(testCode)); // Testni topish
+        if (!Array.isArray(test.results) || test.results.length === 0) {
+            bot.sendMessage(chatId, "📭 Ushbu test bo‘yicha hali hech qanday natija mavjud emas.");
+            return;
+        }
 
-    //     if (!test) {
-    //         bot.sendMessage(chatId, "❌ Bunday test topilmadi. Iltimos, test kodini to‘g‘ri kiriting.");
-    //         return;
-    //     }
+        let sortedResults = [...test.results].sort((a, b) => b.score - a.score);
+        let bestUser = sortedResults[0];
+        let resultMessage = `📊 *Test natijalari (${testCode})*:\n\n`;
 
-    //     let now = Date.now(); // Hozirgi vaqtni olish
-    //     let endTime = new Date();
-    //     let [endHour, endMinute] = test.endTime.split(':').map(Number);
-    //     endTime.setHours(endHour, endMinute, 0, 0);
-
-    //     if (now < endTime.getTime()) {
-    //         bot.sendMessage(chatId, "⏳ Bu test hali yakunlanmagan. Natijalarni test tugagandan keyin ko‘rishingiz mumkin.");
-    //         return;
-    //     }
-
-    //     if (!Array.isArray(test.results) || test.results.length === 0) {
-    //         bot.sendMessage(chatId, "📭 Ushbu test bo‘yicha hali hech qanday natija mavjud emas.");
-    //         return;
-    //     }
-
-    //     // 🔍 Natijalarni chiqarish
-    //     let sortedResults = [...test.results].sort((a, b) => b.correct - a.correct); // Kim eng ko‘p to‘g‘ri ishlagan
-    //     let bestUser = sortedResults[0]; // Eng yaxshi natija
-    //     let resultMessage = `📊 *Test natijalari (${testCode})*:\n\n`;
-
-    //     sortedResults.forEach((res, index) => {
-    //         resultMessage += `🏅 *${index + 1}-o‘rin*\n`;
-    //         resultMessage += `👤 *Ism:* ${res.name || "Noma’lum"}\n`;
-    //         resultMessage += `🔹 *Username:* ${res.username ? `@${res.username}` : "Noma’lum"}\n`;
-    //         resultMessage += `🎯 *To‘g‘ri javoblar:* ${res.correct}/${test.correctAnswers.length} ta\n`;
-    //         resultMessage += `———————————————\n`;
-    //     });
-    //     saveTestResult();
-    //     resultMessage += `\n🥇 *Eng yaxshi natija:* ${bestUser.correct}/${test.correctAnswers.length} ta - ${bestUser.name}`;
-
-    //     bot.sendMessage(chatId, resultMessage, { parse_mode: "Markdown" });
-    //     delete pendingActions[chatId]; // Foydalanuvchi holatini tozalash
-    // }
+        sortedResults.forEach((res, index) => {
+            resultMessage += `🏅 *${index + 1}-o‘rin*\n`;
+            resultMessage += `👤 *Foydalanuvchi:* ${res.username || "Noma’lum"}\n`;
+            resultMessage += `🎯 *To‘g‘ri javoblar:* ${res.score}\n`;
+            resultMessage += `———————————————\n`;
+        });
+        
+        resultMessage += `\n🥇 *G‘olib:* ${bestUser.username || "Noma’lum"} - ${bestUser.score} ball!`;
+        bot.sendMessage(chatId, resultMessage, { parse_mode: "Markdown" });
+        delete pendingActions[chatId];
+    }
 
 });
 
