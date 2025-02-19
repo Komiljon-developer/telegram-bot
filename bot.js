@@ -34,6 +34,8 @@ function loadTests() {
     try {
         if (!fs.existsSync(TESTS_FILE)) {
             console.warn("⚠️ Test fayli mavjud emas, yangi fayl yaratildi.");
+            
+            let tests = []; // 🛠 MUAMMONI TUZATISH: tests o‘zgaruvchisini qo‘shish
             fs.writeFileSync(TESTS_FILE, JSON.stringify(tests, null, 2), 'utf8');
             return [];
         }
@@ -439,6 +441,7 @@ bot.on('message', async (msg) => {
         pendingActions[chatId] = { action: 'enter_result_code' };
         bot.sendMessage(chatId, "📌 Iltimos, test kodini kiriting:");
     } 
+    
     else if (pendingActions[chatId]?.action === 'enter_result_code') {
         let testCode = text.trim();
         let tests = loadTests();
@@ -458,24 +461,30 @@ bot.on('message', async (msg) => {
     
         let sortedResults = [...test.results].sort((a, b) => b.score - a.score);
     
-        let resultPromises = sortedResults.map((res, index) => {
-            return bot.getChat(res.userId)
-                .then(user => {
-                    let userDisplayName = user.username ? `@${escapeMarkdownV2(user.username)}` : escapeMarkdownV2(user.first_name || "Noma’lum");
-                    return `🏅 *${index + 1}-o‘rin*\n👤 *Foydalanuvchi:* ${userDisplayName}\n🎯 *To‘g‘ri javoblar:* ${res.score}\n━━━━━━━━━━━━━━\n`;
-                })
-                .catch(() => {
-                    return `🏅 *${index + 1}-o‘rin*\n👤 *Foydalanuvchi:* Noma’lum\n🎯 *To‘g‘ri javoblar:* ${res.score}\n━━━━━━━━━━━━━━\n`;
-                });
+        let resultPromises = sortedResults.map(async (res, index) => {
+            try {
+                let user = await bot.getChat(res.userId);
+                console.log("🔍 Foydalanuvchi ma'lumotlari:", user); // 👀 Konsolga chiqarish
+                
+                let userDisplayName = user.username 
+                    ? `@${escapeMarkdownV2(user.username)}` 
+                    : escapeMarkdownV2(user.first_name || "Noma’lum");
+    
+                return `🏅 *${index + 1}-o‘rin*\n👤 *Foydalanuvchi:* ${userDisplayName}\n🎯 *To‘g‘ri javoblar:* ${res.score}\n━━━━━━━━━━━━━━\n`;
+            } catch (error) {
+                console.error("❌ Foydalanuvchi ma'lumotini olishda xatolik:", error);
+                return `🏅 *${index + 1}-o‘rin*\n👤 *Foydalanuvchi:* Noma’lum\n🎯 *To‘g‘ri javoblar:* ${res.score}\n━━━━━━━━━━━━━━\n`;
+            }
         });
     
         Promise.all(resultPromises).then(results => {
-            let resultMessage = `📊 *Test natijalari \\(${escapeMarkdownV2(testCode)}\\)*:\n\n` + results.join('');
+            let resultMessage = `📊 *Test natijalari (${escapeMarkdownV2(testCode)})*:\n\n` + results.join('');
     
             bot.sendMessage(chatId, resultMessage, { parse_mode: "MarkdownV2" });
             delete pendingActions[chatId];
         });
     }
+    
     
     
     
