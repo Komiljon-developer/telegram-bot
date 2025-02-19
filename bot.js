@@ -436,47 +436,55 @@ bot.on('message', async (msg) => {
 
 
 
-
- 
-// Test natijalari
-if (text === "Test natijalari") {
-    pendingActions[chatId] = { action: 'enter_result_code' };
-    bot.sendMessage(chatId, "📌 Iltimos, test kodini kiriting:");
-} else if (pendingActions[chatId]?.action === 'enter_result_code') {
-    let testCode = text.trim();
-    let tests = loadTests();
-    let test = tests.find(t => String(t.code) === String(testCode));
-
-    if (!test) {
-        bot.sendMessage(chatId, "❌ Bunday test topilmadi. Iltimos, test kodini to‘g‘ri kiriting.");
-        delete pendingActions[chatId];
-        return;
+//test natijalari
+    if (text === "Test natijalari") {
+        pendingActions[chatId] = { action: 'enter_result_code' };
+        bot.sendMessage(chatId, "📌 Iltimos, test kodini kiriting:");
+    } else if (pendingActions[chatId]?.action === 'enter_result_code') {
+        let testCode = text.trim();
+        let tests = loadTests();
+        let test = tests.find(t => String(t.code) === String(testCode));
+    
+        if (!test) {
+            bot.sendMessage(chatId, "❌ Bunday test topilmadi. Iltimos, test kodini to‘g‘ri kiriting.");
+            delete pendingActions[chatId];
+            return;
+        }
+    
+        if (!Array.isArray(test.results) || test.results.length === 0) {
+            bot.sendMessage(chatId, "📭 Ushbu test bo‘yicha hali hech qanday natija mavjud emas.");
+            delete pendingActions[chatId];
+            return;
+        }
+    
+        let sortedResults = [...test.results].sort((a, b) => b.score - a.score);
+        let bestUser = sortedResults[0];
+    
+        let resultMessage = `📊 *Test natijalari (${testCode})*:\n\n`;
+    
+        let promises = sortedResults.map((res, index) => {
+            return bot.getChat(res.userId) // 🆕 Telegramdan username olish
+                .then(user => {
+                    let userDisplayName = user.username ? `@${user.username}` : user.first_name || "Noma’lum";
+                    resultMessage += `🏅 *${index + 1}-o‘rin*\n`;
+                    resultMessage += `👤 *Foydalanuvchi:* ${userDisplayName}\n`;
+                    resultMessage += `🎯 *To‘g‘ri javoblar:* ${res.score}\n`;
+                    resultMessage += `———————————————\n`;
+                })
+                .catch(() => {
+                    resultMessage += `🏅 *${index + 1}-o‘rin*\n`;
+                    resultMessage += `👤 *Foydalanuvchi:* Noma’lum\n`;
+                    resultMessage += `🎯 *To‘g‘ri javoblar:* ${res.score}\n`;
+                    resultMessage += `———————————————\n`;
+                });
+        });
+    
+        Promise.all(promises).then(() => {
+            bot.sendMessage(chatId, resultMessage, { parse_mode: "Markdown" });
+            delete pendingActions[chatId];
+        });
     }
-
-    if (!Array.isArray(test.results) || test.results.length === 0) {
-        bot.sendMessage(chatId, "📭 Ushbu test bo‘yicha hali hech qanday natija mavjud emas.");
-        delete pendingActions[chatId];
-        return;
-    }
-
-    let sortedResults = [...test.results].sort((a, b) => b.score - a.score);
-    let bestUser = sortedResults[0];
-    let resultMessage = `📊 *Test natijalari (${testCode})*:\n\n`;
-
-    sortedResults.forEach((res, index) => {
-        let userDisplayName = res.username || res.first_name || "Noma’lum"; // 🆕 Foydalanuvchini aniqlash
-        resultMessage += `🏅 *${index + 1}-o‘rin*\n`;
-        resultMessage += `👤 *Foydalanuvchi:* ${userDisplayName}\n`;
-        resultMessage += `🎯 *To‘g‘ri javoblar:* ${res.score}\n`;
-        resultMessage += `———————————————\n`;
-    });
-
-    let bestUserDisplayName = bestUser.username || bestUser.first_name || "Noma’lum"; // 🆕 G‘olibni chiqarish
-    resultMessage += `\n🥇 *G‘olib:* ${bestUserDisplayName} - ${bestUser.score} ball!`;
-
-    bot.sendMessage(chatId, resultMessage, { parse_mode: "Markdown" });
-    delete pendingActions[chatId];
-}
+    
 
 
 
