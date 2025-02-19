@@ -435,7 +435,10 @@ bot.on('message', async (msg) => {
 
 
 
-
+    const escapeMarkdown = (text) => {
+        return text.replace(/[_*[\]()~`>#+\-=|{}.!]/g, '\\$&');
+    };
+    
     if (text === "Test natijalari") {
         pendingActions[chatId] = { action: 'enter_result_code' };
         bot.sendMessage(chatId, "📌 Iltimos, test kodini kiriting:");
@@ -462,7 +465,7 @@ bot.on('message', async (msg) => {
         let resultPromises = sortedResults.map((res, index) => {
             return bot.getChat(res.userId)
                 .then(user => {
-                    let userDisplayName = user.username ? `@${user.username}` : (user.first_name || "Noma’lum");
+                    let userDisplayName = user.username ? `@${escapeMarkdown(user.username)}` : escapeMarkdown(user.first_name || "Noma’lum");
                     return `🏅 *${index + 1}-o‘rin*\n👤 *Foydalanuvchi:* ${userDisplayName}\n🎯 *To‘g‘ri javoblar:* ${res.score}\n———————————————\n`;
                 })
                 .catch(() => {
@@ -471,9 +474,9 @@ bot.on('message', async (msg) => {
         });
     
         Promise.all(resultPromises).then(results => {
-            let resultMessage = `📊 *Test natijalari (${testCode})*:\n\n` + results.join('');
+            let resultMessage = `📊 *Test natijalari (${escapeMarkdown(testCode)})*:\n\n` + results.join('');
     
-            bot.sendMessage(chatId, resultMessage, { parse_mode: "Markdown" });
+            bot.sendMessage(chatId, resultMessage, { parse_mode: "MarkdownV2" });
             delete pendingActions[chatId];
         });
     }
