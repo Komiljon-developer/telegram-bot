@@ -436,7 +436,6 @@ bot.on('message', async (msg) => {
 
 
 
-//test natijalari
     if (text === "Test natijalari") {
         pendingActions[chatId] = { action: 'enter_result_code' };
         bot.sendMessage(chatId, "📌 Iltimos, test kodini kiriting:");
@@ -459,32 +458,26 @@ bot.on('message', async (msg) => {
         }
     
         let sortedResults = [...test.results].sort((a, b) => b.score - a.score);
-        let bestUser = sortedResults[0];
     
-        let resultMessage = `📊 *Test natijalari (${testCode})*:\n\n`;
-    
-        let promises = sortedResults.map((res, index) => {
-            return bot.getChat(res.userId) // 🆕 Telegramdan username olish
+        let resultPromises = sortedResults.map((res, index) => {
+            return bot.getChat(res.userId)
                 .then(user => {
-                    let userDisplayName = user.username ? `@${user.username}` : user.first_name || "Noma’lum";
-                    resultMessage += `🏅 *${index + 1}-o‘rin*\n`;
-                    resultMessage += `👤 *Foydalanuvchi:* ${userDisplayName}\n`;
-                    resultMessage += `🎯 *To‘g‘ri javoblar:* ${res.score}\n`;
-                    resultMessage += `———————————————\n`;
+                    let userDisplayName = user.username ? `@${user.username}` : (user.first_name || "Noma’lum");
+                    return `🏅 *${index + 1}-o‘rin*\n👤 *Foydalanuvchi:* ${userDisplayName}\n🎯 *To‘g‘ri javoblar:* ${res.score}\n———————————————\n`;
                 })
                 .catch(() => {
-                    resultMessage += `🏅 *${index + 1}-o‘rin*\n`;
-                    resultMessage += `👤 *Foydalanuvchi:* Noma’lum\n`;
-                    resultMessage += `🎯 *To‘g‘ri javoblar:* ${res.score}\n`;
-                    resultMessage += `———————————————\n`;
+                    return `🏅 *${index + 1}-o‘rin*\n👤 *Foydalanuvchi:* Noma’lum\n🎯 *To‘g‘ri javoblar:* ${res.score}\n———————————————\n`;
                 });
         });
     
-        Promise.all(promises).then(() => {
+        Promise.all(resultPromises).then(results => {
+            let resultMessage = `📊 *Test natijalari (${testCode})*:\n\n` + results.join('');
+    
             bot.sendMessage(chatId, resultMessage, { parse_mode: "Markdown" });
             delete pendingActions[chatId];
         });
     }
+    
     
 
 
