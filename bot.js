@@ -441,7 +441,7 @@ bot.on('message', async (msg) => {
 
 
 
-    //test natijalari
+    // Test natijalari
     if (text === "Test natijalari") {
         pendingActions[chatId] = { action: 'enter_result_code' };
         bot.sendMessage(chatId, "📌 Iltimos, test kodini kiriting:");
@@ -452,11 +452,13 @@ bot.on('message', async (msg) => {
 
         if (!test) {
             bot.sendMessage(chatId, "❌ Bunday test topilmadi. Iltimos, test kodini to‘g‘ri kiriting.");
+            delete pendingActions[chatId];
             return;
         }
 
         if (!Array.isArray(test.results) || test.results.length === 0) {
             bot.sendMessage(chatId, "📭 Ushbu test bo‘yicha hali hech qanday natija mavjud emas.");
+            delete pendingActions[chatId];
             return;
         }
 
@@ -475,6 +477,7 @@ bot.on('message', async (msg) => {
         bot.sendMessage(chatId, resultMessage, { parse_mode: "Markdown" });
         delete pendingActions[chatId];
     }
+
 
 });
 
