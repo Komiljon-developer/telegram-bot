@@ -432,7 +432,7 @@ bot.on('message', async (msg) => {
     
     
     const escapeMarkdownV2 = (text) => {
-        return text.replace(/[_*[\]()~`>#+\-=|{}.!]/g, '\\$&');
+        return text.replace(/([_*[\]()~`>#+\-=|{}.!\\])/g, '\\$1');
     };
     
     if (text === "Test natijalari") {
@@ -476,6 +476,7 @@ bot.on('message', async (msg) => {
             delete pendingActions[chatId];
         });
     }
+    
     
     
     
