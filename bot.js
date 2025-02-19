@@ -480,7 +480,7 @@ bot.on('message', async (msg) => {
         Promise.all(resultPromises).then(results => {
             let resultMessage = `📊 *Test natijalari (${escapeMarkdownV2(testCode)})*:\n\n` + results.join('');
     
-            bot.sendMessage(chatId, resultMessage, { parse_mode: "MarkdownV2" });
+            bot.sendMessage(chatId, resultMessage, { parse_mode: "Markdown" });
             delete pendingActions[chatId];
         });
     }
