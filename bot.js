@@ -377,106 +377,105 @@ bot.on('message', async (msg) => {
     
     else if (pendingActions[chatId]?.action === "waiting_for_answer") {
         let test = loadTests().find(t => t.code === pendingActions[chatId].testId);
+        
         if (!test) {
-            bot.sendMessage(chatId, "❌ Test topilmadi.");
             delete pendingActions[chatId];
-            return;
+            return bot.sendMessage(chatId, "❌ Test topilmadi.");
         }
     
         let now = moment().tz("Asia/Tashkent").format("HH:mm");
     
         // ✅ Agar test vaqti tugagan bo'lsa, javoblarni qabul qilmaymiz
-        if (now > test.endTime) {
-            bot.sendMessage(chatId, `⛔ Test vaqti tugagan! Endi javob yuborish mumkin emas.`);
-            delete pendingActions[chatId];  // 🔥 Foydalanuvchini test rejimidan chiqaramiz
-            return;
+        if (test.endTime && now > test.endTime) {
+            delete pendingActions[chatId]; // 🔥 Foydalanuvchini test rejimidan chiqaramiz
+            return bot.sendMessage(chatId, `⛔ Test vaqti tugagan! Endi javob yuborish mumkin emas.`);
         }
     
         // ✅ To'g'ri javoblar test obyektidan olinadi
         let correctAnswers = test.correctAnswers;
-        if (!correctAnswers) {
-            bot.sendMessage(chatId, "❌ Xatolik: Test uchun to'g'ri javoblar topilmadi.");
-            return;
-        }
-    
-        let correctAnswersArray = Array.isArray(correctAnswers) ? correctAnswers : Object.values(correctAnswers);
-        if (correctAnswersArray.length === 0) {
-            bot.sendMessage(chatId, "❌ Xatolik: Test uchun to'g'ri javoblar mavjud emas.");
-            return;
+        if (!correctAnswers || correctAnswers.length === 0) {
+            return bot.sendMessage(chatId, "❌ Xatolik: Test uchun to'g'ri javoblar topilmadi.");
         }
     
         // ✅ Foydalanuvchining javoblarini qayta ishlash
         let userAnswers = text.trim().toUpperCase().split('');
     
-        if (userAnswers.length !== correctAnswersArray.length) {
-            bot.sendMessage(chatId, `❌ Xatolik: Siz ${correctAnswersArray.length} ta javob kiritishingiz kerak!`);
-            return;
+        if (userAnswers.length !== correctAnswers.length) {
+            return bot.sendMessage(chatId, `❌ Xatolik: Siz ${correctAnswers.length} ta javob kiritishingiz kerak!`);
         }
     
         // ✅ Natijalarni solishtirish va belgilash
-        let results = userAnswers.map((answer, index) => {
-            return `${answer} ${answer === correctAnswersArray[index] ? '✅' : '❌'}`;
-        });
+        let results = userAnswers.map((answer, index) => 
+            `${answer} ${answer === correctAnswers[index] ? '✅' : '❌'}`
+        );
     
-        let score = userAnswers.filter((answer, index) => answer === correctAnswersArray[index]).length;
-        let percentage = ((score / correctAnswersArray.length) * 100).toFixed(2);
+        let score = userAnswers.filter((answer, index) => answer === correctAnswers[index]).length;
+        let percentage = ((score / correctAnswers.length) * 100).toFixed(2);
     
+        // ✅ Natijalarni saqlash
         saveTestResult(test.code, chatId, userAnswers.join(''), score);
     
         // 📝 Foydalanuvchiga natijani yuborish
         bot.sendMessage(
             chatId,
-            `📊 Sizning natijangiz:\n${results.join('\n')}\n\n✅ To'g'ri javoblar: ${score}/${correctAnswersArray.length}\n📈 Foiz: ${percentage}%`
+            `📊 *Sizning natijangiz:*\n${results.join('\n')}\n\n✅ *To'g'ri javoblar:* ${score}/${correctAnswers.length}\n📈 *Foiz:* ${percentage}%`,
+            { parse_mode: "Markdown" }
         );
-    }
-    
-    
-    
-    
-    
-    
-    
-
-
-
-
-
-    // Test natijalari
-    if (text === "Test natijalari") {
-        pendingActions[chatId] = { action: 'enter_result_code' };
-        bot.sendMessage(chatId, "📌 Iltimos, test kodini kiriting:");
-    } else if (pendingActions[chatId]?.action === 'enter_result_code') {
-        let testCode = text.trim();
-        let tests = loadTests();
-        let test = tests.find(t => String(t.code) === String(testCode));
-
-        if (!test) {
-            bot.sendMessage(chatId, "❌ Bunday test topilmadi. Iltimos, test kodini to‘g‘ri kiriting.");
-            delete pendingActions[chatId];
-            return;
-        }
-
-        if (!Array.isArray(test.results) || test.results.length === 0) {
-            bot.sendMessage(chatId, "📭 Ushbu test bo‘yicha hali hech qanday natija mavjud emas.");
-            delete pendingActions[chatId];
-            return;
-        }
-
-        let sortedResults = [...test.results].sort((a, b) => b.score - a.score);
-        let bestUser = sortedResults[0];
-        let resultMessage = `📊 *Test natijalari (${testCode})*:\n\n`;
-
-        sortedResults.forEach((res, index) => {
-            resultMessage += `🏅 *${index + 1}-o‘rin*\n`;
-            resultMessage += `👤 *Foydalanuvchi:* ${res.username || "Noma’lum"}\n`;
-            resultMessage += `🎯 *To‘g‘ri javoblar:* ${res.score}\n`;
-            resultMessage += `———————————————\n`;
-        });
         
-        resultMessage += `\n🥇 *G‘olib:* ${bestUser.username || "Noma’lum"} - ${bestUser.score} ball!`;
-        bot.sendMessage(chatId, resultMessage, { parse_mode: "Markdown" });
-        delete pendingActions[chatId];
+        delete pendingActions[chatId]; // Foydalanuvchini test rejimidan chiqarish
     }
+    
+    
+    
+    
+    
+    
+    
+    
+
+
+
+
+
+  // Test natijalari ko‘rish
+if (text === "Test natijalari") {
+    pendingActions[chatId] = { action: 'enter_result_code' };
+    return bot.sendMessage(chatId, "📌 Iltimos, test kodini kiriting:");
+}
+
+if (pendingActions[chatId]?.action === 'enter_result_code') {
+    let testCode = text.trim();
+    let tests = loadTests();
+    let test = tests.find(t => String(t.code) === String(testCode));
+
+    if (!test) {
+        delete pendingActions[chatId];
+        return bot.sendMessage(chatId, "❌ Bunday test topilmadi. Iltimos, test kodini to‘g‘ri kiriting.");
+    }
+
+    if (!Array.isArray(test.results) || test.results.length === 0) {
+        delete pendingActions[chatId];
+        return bot.sendMessage(chatId, "📭 Ushbu test bo‘yicha hali hech qanday natija mavjud emas.");
+    }
+
+    // Test natijalarini tartib bilan chiqarish
+    let sortedResults = test.results.sort((a, b) => b.score - a.score);
+    let bestUser = sortedResults[0];
+    let resultMessage = `📊 *Test natijalari (${testCode})*:\n\n`;
+
+    sortedResults.forEach((res, index) => {
+        resultMessage += `🏅 *${index + 1}-o‘rin*\n`;
+        resultMessage += `👤 *Foydalanuvchi:* ${res.username || "Noma’lum"}\n`;
+        resultMessage += `🎯 *To‘g‘ri javoblar:* ${res.score}\n`;
+        resultMessage += `———————————————\n`;
+    });
+
+    resultMessage += `\n🥇 *G‘olib:* ${bestUser.username || "Noma’lum"} - ${bestUser.score} ball!`;
+    
+    delete pendingActions[chatId];
+    return bot.sendMessage(chatId, resultMessage, { parse_mode: "Markdown" });
+}
+
 
 
 });
